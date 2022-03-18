@@ -5,22 +5,17 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.format.DateFormat;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import java.util.ArrayList;
+import java.text.DateFormat;
 import java.util.Calendar;
-import java.util.List;
-import java.util.Random;
+import java.util.Date;
 
 import devs.mulham.horizontalcalendar.HorizontalCalendar;
-import devs.mulham.horizontalcalendar.model.CalendarEvent;
-import devs.mulham.horizontalcalendar.utils.CalendarEventsPredicate;
-import devs.mulham.horizontalcalendar.utils.HorizontalCalendarListener;
+import devs.mulham.horizontalcalendar.HorizontalCalendarListener;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,63 +25,47 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        /* start 2 months ago from now */
-        Calendar startDate = Calendar.getInstance();
-        startDate.add(Calendar.MONTH, -2);
-
-        /* end after 2 months from now */
+        /** end after 1 month from now */
         Calendar endDate = Calendar.getInstance();
         endDate.add(Calendar.MONTH, 2);
 
-        // Default Date set to Today.
-        final Calendar defaultSelectedDate = Calendar.getInstance();
+        /** start before 1 month from now */
+        Calendar startDate = Calendar.getInstance();
+        startDate.add(Calendar.DAY_OF_WEEK, -3);
+
+        final Calendar defaultDate = Calendar.getInstance();
+        defaultDate.add(Calendar.MONTH, 1);
+        defaultDate.add(Calendar.DAY_OF_WEEK, +5);
 
         horizontalCalendar = new HorizontalCalendar.Builder(this, R.id.calendarView)
-                .range(startDate, endDate)
-                .datesNumberOnScreen(5)
-                .configure()
-                    .formatTopText("MMM")
-                    .formatMiddleText("dd")
-                    .formatBottomText("EEE")
-                    .showTopText(true)
-                    .showBottomText(true)
-                    .textColor(Color.LTGRAY, Color.WHITE)
-                    .colorTextMiddle(Color.LTGRAY, Color.parseColor("#ffd54f"))
-                .end()
-                .defaultSelectedDate(defaultSelectedDate)
-                .addEvents(new CalendarEventsPredicate() {
-
-                    Random rnd = new Random();
-                    @Override
-                    public List<CalendarEvent> events(Calendar date) {
-                        List<CalendarEvent> events = new ArrayList<>();
-                        int count = rnd.nextInt(6);
-
-                        for (int i = 0; i <= count; i++){
-                            events.add(new CalendarEvent(Color.rgb(rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)), "event"));
-                        }
-
-                        return events;
-                    }
-                })
+                .startDate(startDate.getTime())
+                .endDate(endDate.getTime())
+                .datesNumberOnScreen(7)
+                .textSizeDayNumber(20f)
+                .dayNameFormat("E")
+                .dayNumberFormat("dd")
+                .monthFormat("MMM")
+                .showDayName(true)
+                .showMonthName(true)
+                .defaultSelectedDate(defaultDate.getTime())
+                .textColor(Color.BLACK, Color.BLACK)
+                .selectedDateBackground(Color.WHITE)
                 .build();
 
-        Log.i("Default Date", DateFormat.format("EEE, MMM d, yyyy", defaultSelectedDate).toString());
+        horizontalCalendar.defaultSelectedDate = defaultDate.getTime();
 
         horizontalCalendar.setCalendarListener(new HorizontalCalendarListener() {
             @Override
-            public void onDateSelected(Calendar date, int position) {
-                String selectedDateStr = DateFormat.format("EEE, MMM d, yyyy", date).toString();
-                Toast.makeText(MainActivity.this, selectedDateStr + " selected!", Toast.LENGTH_SHORT).show();
-                Log.i("onDateSelected", selectedDateStr + " - Position = " + position);
+            public void onDateSelected(Date date, int position) {
+                Toast.makeText(MainActivity.this, DateFormat.getDateInstance().format(date) + " is selected!", Toast.LENGTH_SHORT).show();
             }
 
         });
 
-        FloatingActionButton fab = findViewById(R.id.fab);
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
