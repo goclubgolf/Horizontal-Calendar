@@ -3,29 +3,28 @@ package devs.mulham.horizontalcalendar;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
 import android.util.TypedValue;
-
-import devs.mulham.horizontalcalendar.adapter.HorizontalCalendarBaseAdapter;
-import devs.mulham.horizontalcalendar.model.CalendarItemStyle;
-import devs.mulham.horizontalcalendar.model.HorizontalCalendarConfig;
 
 /**
  * See {devs.mulham.horizontalcalendar.R.styleable#HorizontalCalendarView HorizontalCalendarView Attributes}
  *
  * @author Mulham-Raee
- * @since v1.0.0
+ * @version 1.1
  */
 public class HorizontalCalendarView extends RecyclerView {
 
-    private CalendarItemStyle defaultStyle;
-    private CalendarItemStyle selectedItemStyle;
-    private HorizontalCalendarConfig config;
-    private int shiftCells;
+    private int textColorNormal, textColorSelected;
+    private int selectedDateBackground;
+    private int selectorColor;
+    private float textSizeMonthName, textSizeDayNumber, textSizeDayName;
+    private HorizontalCalendar horizontalCalendar;
 
     private final float FLING_SCALE_DOWN_FACTOR = 0.5f;
+    private final float DEFAULT_TEXT_SIZE_MONTH_NAME = 14f;
+    private final float DEFAULT_TEXT_SIZE_DAY_NUMBER = 16f;
+    private final float DEFAULT_TEXT_SIZE_DAY_NAME = 14f;
 
     public HorizontalCalendarView(Context context) {
         super(context);
@@ -40,43 +39,29 @@ public class HorizontalCalendarView extends RecyclerView {
                 0, 0);
 
         try {
-            int textColorNormal = a.getColor(R.styleable.HorizontalCalendarView_textColorNormal, Color.LTGRAY);
-            int colorTopText = a.getColor(R.styleable.HorizontalCalendarView_colorTopText, textColorNormal);
-            int colorMiddleText = a.getColor(R.styleable.HorizontalCalendarView_colorMiddleText, textColorNormal);
-            int colorBottomText = a.getColor(R.styleable.HorizontalCalendarView_colorBottomText, textColorNormal);
+            textColorNormal = a.getColor(R.styleable.HorizontalCalendarView_textColorNormal, Color.LTGRAY);
+            textColorSelected = a.getColor(R.styleable.HorizontalCalendarView_textColorSelected, Color.BLACK);
+            selectedDateBackground = a.getColor(R.styleable.HorizontalCalendarView_selectedDateBackground, Color.TRANSPARENT);
+            selectorColor = a.getColor(R.styleable.HorizontalCalendarView_selectorColor, fetchAccentColor());
 
-            int textColorSelected = a.getColor(R.styleable.HorizontalCalendarView_textColorSelected, Color.BLACK);
-            int colorTopTextSelected = a.getColor(R.styleable.HorizontalCalendarView_colorTopTextSelected, textColorSelected);
-            int colorMiddleTextSelected = a.getColor(R.styleable.HorizontalCalendarView_colorMiddleTextSelected, textColorSelected);
-            int colorBottomTextSelected = a.getColor(R.styleable.HorizontalCalendarView_colorBottomTextSelected, textColorSelected);
-            Drawable selectedDateBackground = a.getDrawable(R.styleable.HorizontalCalendarView_selectedDateBackground);
-
-            int selectorColor = a.getColor(R.styleable.HorizontalCalendarView_selectorColor, fetchAccentColor());
-            float sizeTopText = getRawSizeValue(a, R.styleable.HorizontalCalendarView_sizeTopText,
-                    HorizontalCalendarConfig.DEFAULT_SIZE_TEXT_TOP);
-            float sizeMiddleText = getRawSizeValue(a, R.styleable.HorizontalCalendarView_sizeMiddleText,
-                    HorizontalCalendarConfig.DEFAULT_SIZE_TEXT_MIDDLE);
-            float sizeBottomText = getRawSizeValue(a, R.styleable.HorizontalCalendarView_sizeBottomText,
-                    HorizontalCalendarConfig.DEFAULT_SIZE_TEXT_BOTTOM);
-
-
-            defaultStyle = new CalendarItemStyle(colorTopText, colorMiddleText, colorBottomText, null);
-            selectedItemStyle = new CalendarItemStyle(colorTopTextSelected, colorMiddleTextSelected, colorBottomTextSelected, selectedDateBackground);
-            config = new HorizontalCalendarConfig(sizeTopText, sizeMiddleText, sizeBottomText, selectorColor);
-
+            textSizeMonthName = getRawSizeValue(a, R.styleable.HorizontalCalendarView_textSizeMonthName,
+                    DEFAULT_TEXT_SIZE_MONTH_NAME);
+            textSizeDayNumber = getRawSizeValue(a, R.styleable.HorizontalCalendarView_textSizeDayNumber,
+                    DEFAULT_TEXT_SIZE_DAY_NUMBER);
+            textSizeDayName = getRawSizeValue(a, R.styleable.HorizontalCalendarView_textSizeDayName,
+                    DEFAULT_TEXT_SIZE_DAY_NAME);
         } finally {
             a.recycle();
         }
-
     }
 
     /**
-     * get the raw value from a complex value ( Ex: complex = 14sp, returns 14)
+     *  get the raw value from a complex value ( Ex: complex = 14sp, returns 14)
      */
-    private float getRawSizeValue(TypedArray a, int index, float defValue) {
+    private float getRawSizeValue(TypedArray a ,int index, float defValue){
         TypedValue outValue = new TypedValue();
         boolean result = a.getValue(index, outValue);
-        if (!result) {
+        if (!result){
             return defValue;
         }
 
@@ -109,8 +94,8 @@ public class HorizontalCalendarView extends RecyclerView {
     }
 
     @Override
-    public HorizontalCalendarBaseAdapter getAdapter() {
-        return (HorizontalCalendarBaseAdapter) super.getAdapter();
+    public HorizontalCalendarAdapter getAdapter() {
+        return (HorizontalCalendarAdapter) super.getAdapter();
     }
 
     @Override
@@ -128,33 +113,47 @@ public class HorizontalCalendarView extends RecyclerView {
         return color;
     }
 
-    public void applyConfigFromLayout(HorizontalCalendar horizontalCalendar) {
-        horizontalCalendar.getConfig().setupDefaultValues(config);
-        horizontalCalendar.getDefaultStyle().setupDefaultValues(defaultStyle);
-        horizontalCalendar.getSelectedItemStyle().setupDefaultValues(selectedItemStyle);
+    public HorizontalCalendar getHorizontalCalendar() {
+        return horizontalCalendar;
+    }
 
-        // clean, not needed anymore
-        config = null;
-        defaultStyle = null;
-        selectedItemStyle = null;
+    public void setHorizontalCalendar(HorizontalCalendar horizontalCalendar) {
 
-        this.shiftCells = horizontalCalendar.getNumberOfDatesOnScreen() / 2;
+        if (horizontalCalendar.getTextColorNormal() == 0) {
+            horizontalCalendar.setTextColorNormal(textColorNormal);
+        }
+        if (horizontalCalendar.getTextColorSelected() == 0) {
+            horizontalCalendar.setTextColorSelected(textColorSelected);
+        }
+        if (horizontalCalendar.getSelectorColor() == 0) {
+            horizontalCalendar.setSelectorColor(selectorColor);
+        }
+        if (horizontalCalendar.getSelectedDateBackground() == 0) {
+            horizontalCalendar.setSelectedDateBackground(selectedDateBackground);
+        }
+        if (horizontalCalendar.getTextSizeMonthName() == 0) {
+            horizontalCalendar.setTextSizeMonthName(textSizeMonthName);
+        }
+        if (horizontalCalendar.getTextSizeDayNumber() == 0) {
+            horizontalCalendar.setTextSizeDayNumber(textSizeDayNumber);
+        }
+        if (horizontalCalendar.getTextSizeDayName() == 0) {
+            horizontalCalendar.setTextSizeDayName(textSizeDayName);
+        }
+
+        this.horizontalCalendar = horizontalCalendar;
     }
 
     /**
      * @return position of selected date on center of screen
      */
     public int getPositionOfCenterItem() {
-        final HorizontalLayoutManager layoutManager = getLayoutManager();
-        if (layoutManager == null) {
+        int numberOfDatesOnScreen = horizontalCalendar.getNumberOfDatesOnScreen();
+        int firstVisibilePosition = getLayoutManager().findFirstCompletelyVisibleItemPosition();
+        if (firstVisibilePosition == -1) {
             return -1;
-        } else {
-            final int firstVisiblePosition = layoutManager.findFirstCompletelyVisibleItemPosition();
-            if (firstVisiblePosition == -1) {
-                return -1;
-            } else {
-                return firstVisiblePosition + shiftCells;
-            }
         }
+        return firstVisibilePosition + (numberOfDatesOnScreen / 2);
     }
+
 }
